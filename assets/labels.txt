@@ -1,0 +1,7 @@
+0 background
+1 cheeseburger
+2 french_fries
+3 salad
+4 pizza
+5 sushi
+
