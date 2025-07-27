@@ -1,16 +1,20 @@
-# calorie_quest
+# Calorie Quest
 
-A new Flutter project.
+Calorie Quest is an app that tracks calories by taking a picture of your meal and using AI to estimate the calorie content.
+
+## Features
+
+- Take a photo of your food
+- AI-based calorie estimation
+- Track your daily calorie intake
 
 ## Getting Started
 
-This project is a starting point for a Flutter application.
+1. Clone the repo
+2. Run `flutter pub get`
+3. Run the app on your preferred device
 
-A few resources to get you started if this is your first Flutter project:
+---
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+Made with Flutter and AI technology.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
