@@ -1,415 +1,486 @@
-import 'dart:convert';
-import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:io';
-import 'package:tflite/tflite.dart';
-import 'package:fl_chart/fl_chart.dart';
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart';
 
-// Meal model
-class Meal {
-  final String id;
-  final List<String> foodItems;
-  final int calories;
-  final double protein;
-  final double carbs;
-  final double fat;
-  final DateTime timestamp;
+     import 'dart:convert';
+     import 'package:flutter/material.dart';
+     import 'package:image_picker/image_picker.dart';
+     import 'package:http/http.dart' as http;
+     import 'package:shared_preferences/shared_preferences.dart';
+     import 'package:fl_chart/fl_chart.dart';
+     import 'dart:io' show Platform, File;
+     import 'package:flutter/foundation.dart';
+     import 'package:device_info_plus/device_info_plus.dart';
 
-  Meal({
-    required this.id,
-    required this.foodItems,
-    required this.calories,
-    required this.protein,
-    required this.carbs,
-    required this.fat,
-    required this.timestamp,
-  });
+     // Meal model
+     class Meal {
+       final String id;
+       final List<String> foodItems;
+       final int calories;
+       final double protein;
+       final double carbs;
+       final double fat;
+       final DateTime timestamp;
 
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'foodItems': foodItems,
-        'calories': calories,
-        'protein': protein,
-        'carbs': carbs,
-        'fat': fat,
-        'timestamp': timestamp.toIso8601String(),
-      };
+       Meal({
+         required this.id,
+         required this.foodItems,
+         required this.calories,
+         required this.protein,
+         required this.carbs,
+         required this.fat,
+         required this.timestamp,
+       });
 
-  factory Meal.fromJson(Map<String, dynamic> json) => Meal(
-        id: json['id'],
-        foodItems: List<String>.from(json['foodItems']),
-        calories: json['calories'],
-        protein: json['protein'].toDouble(),
-        carbs: json['carbs'].toDouble(),
-        fat: json['fat'].toDouble(),
-        timestamp: DateTime.parse(json['timestamp']),
-      );
-}
+       Map<String, dynamic> toJson() => {
+             'id': id,
+             'foodItems': foodItems,
+             'calories': calories,
+             'protein': protein,
+             'carbs': carbs,
+             'fat': fat,
+             'timestamp': timestamp.toIso8601String(),
+           };
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+       factory Meal.fromJson(Map<String, dynamic> json) => Meal(
+             id: json['id'],
+             foodItems: List<String>.from(json['foodItems']),
+             calories: json['calories'],
+             protein: json['protein'].toDouble(),
+             carbs: json['carbs'].toDouble(),
+             fat: json['fat'].toDouble(),
+             timestamp: DateTime.parse(json['timestamp']),
+           );
+     }
 
-  // Load TFLite model on Android, iOS, and macOS
-  if (!kIsWeb && (Platform.isAndroid || Platform.isIOS || Platform.isMacOS)) {
-    await _loadTfLiteModel();
-  }
+     void main() {
+       runApp(const CaloriScanApp());
+     }
 
-  runApp(const CaloriScanApp());
-}
+     class CaloriScanApp extends StatelessWidget {
+       const CaloriScanApp({super.key});
 
-Future<void> _loadTfLiteModel() async {
-  try {
-    String? result = await Tflite.loadModel(
-      model: "assets/mobilenet_v1_0.25_128.tflite",
-      labels: "assets/labels.txt",
-    );
-    debugPrint("Model loaded: $result");
-  } catch (e) {
-    debugPrint("Failed to load TFLite model: $e");
-  }
-}
+       @override
+       Widget build(BuildContext context) {
+         return MaterialApp(
+           title: 'CaloriScan',
+           theme: ThemeData(
+             primarySwatch: Colors.deepPurple,
+             visualDensity: VisualDensity.adaptivePlatformDensity,
+           ),
+           home: const HomeScreen(),
+         );
+       }
+     }
 
-class CaloriScanApp extends StatelessWidget {
-  const CaloriScanApp({super.key});
+     class HomeScreen extends StatefulWidget {
+       const HomeScreen({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'CaloriScan',
-      theme: ThemeData(
-        primarySwatch: Colors.deepPurple,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-      ),
-      home: const HomeScreen(),
-    );
-  }
-}
+       @override
+       _HomeScreenState createState() => _HomeScreenState();
+     }
 
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+     class _HomeScreenState extends State<HomeScreen> {
+       int _selectedIndex = 0;
 
-  @override
-  _HomeScreenState createState() => _HomeScreenState();
-}
+       static final List<Widget> _widgetOptions = <Widget>[
+         const CameraScreen(),
+         const HistoryScreen(),
+       ];
 
-class _HomeScreenState extends State<HomeScreen> {
-  int _selectedIndex = 0;
+       void _onItemTapped(int index) {
+         setState(() {
+           _selectedIndex = index;
+         });
+       }
 
-  static final List<Widget> _widgetOptions = <Widget>[
-    const CameraScreen(),
-    const HistoryScreen(),
-  ];
+       @override
+       Widget build(BuildContext context) {
+         return Scaffold(
+           appBar: AppBar(title: const Text('CaloriScan')),
+           body: _widgetOptions.elementAt(_selectedIndex),
+           bottomNavigationBar: BottomNavigationBar(
+             items: const <BottomNavigationBarItem>[
+               BottomNavigationBarItem(icon: Icon(Icons.camera), label: 'Scan'),
+               BottomNavigationBarItem(icon: Icon(Icons.history), label: 'History'),
+             ],
+             currentIndex: _selectedIndex,
+             onTap: _onItemTapped,
+           ),
+         );
+       }
+     }
 
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
+     class CameraScreen extends StatefulWidget {
+       const CameraScreen({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('CaloriScan')),
-      body: _widgetOptions.elementAt(_selectedIndex),
-      bottomNavigationBar: BottomNavigationBar(
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(icon: Icon(Icons.camera), label: 'Scan'),
-          BottomNavigationBarItem(icon: Icon(Icons.history), label: 'History'),
-        ],
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-      ),
-    );
-  }
-}
+       @override
+       _CameraScreenState createState() => _CameraScreenState();
+     }
 
-class CameraScreen extends StatefulWidget {
-  const CameraScreen({super.key});
+     class _CameraScreenState extends State<CameraScreen> {
+       XFile? _image;
+       final TextEditingController _descriptionController = TextEditingController();
+       List<String> _foodItems = [];
+       bool _isLoading = false;
+       String? _errorMessage;
 
-  @override
-  _CameraScreenState createState() => _CameraScreenState();
-}
+       Future<void> _pickImage() async {
+         final picker = ImagePicker();
+         try {
+           XFile? pickedFile;
+           if (!kIsWeb && Platform.isIOS) {
+             final deviceInfo = DeviceInfoPlugin();
+             final iosInfo = await deviceInfo.iosInfo;
+             if (!iosInfo.isPhysicalDevice) {
+               pickedFile = await picker.pickImage(source: ImageSource.gallery);
+             } else {
+               pickedFile = await picker.pickImage(source: ImageSource.camera);
+             }
+           } else {
+             pickedFile = await picker.pickImage(source: ImageSource.camera);
+           }
 
-class _CameraScreenState extends State<CameraScreen> {
-  XFile? _image;
-  List<String> _foodItems = [];
-  bool _isLoading = false;
+           if (pickedFile != null) {
+             setState(() {
+               _image = pickedFile;
+               _isLoading = true;
+               _errorMessage = null;
+             });
 
-  Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    // Explicitly set source to camera for macOS, iOS, Android
-    final pickedFile = await picker.pickImage(source: ImageSource.camera);
+             // Show dialog for manual description
+             _getFoodItemsFromDescription();
+           } else {
+             setState(() {
+               _errorMessage = 'No image selected.';
+             });
+           }
+         } catch (e) {
+           setState(() {
+             _isLoading = false;
+             _errorMessage = 'Error accessing camera or gallery: $e';
+           });
+           debugPrint('Image picker error: $e');
+         }
+       }
 
-    if (pickedFile != null) {
-      setState(() {
-        _image = pickedFile;
-        _isLoading = true;
-      });
+       Future<void> _getFoodItemsFromDescription() async {
+         showDialog(
+           context: context,
+           builder: (context) => AlertDialog(
+             title: const Text('Describe the Image'),
+             content: TextField(
+               controller: _descriptionController,
+               decoration: const InputDecoration(hintText: 'e.g., burger and fries on a plate'),
+             ),
+             actions: [
+               TextButton(
+                 onPressed: () {
+                   Navigator.pop(context);
+                   _processDescription();
+                 },
+                 child: const Text('Submit'),
+               ),
+             ],
+           ),
+         );
+       }
 
-      await _classifyImage(_image!);
-      setState(() {
-        _isLoading = false;
-      });
+       Future<void> _processDescription() async {
+         final description = _descriptionController.text.trim();
+         if (description.isEmpty) {
+           setState(() {
+             _errorMessage = 'Please provide a description.';
+             _isLoading = false;
+           });
+           return;
+         }
 
-      if (_foodItems.isNotEmpty) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ResultsScreen(foodItems: _foodItems),
-          ),
-        );
-      }
-    }
-  }
+         setState(() {
+           _isLoading = true;
+         });
 
-  Future<void> _classifyImage(XFile image) async {
-    if (kIsWeb) {
-      setState(() {
-        _foodItems = [];
-      });
-    } else {
-      var recognitions = await Tflite.runModelOnImage(
-        path: image.path,
-        numResults: 5,
-        threshold: 0.5,
-      );
+         try {
+           final prompt = "Based on this description: '$description', identify possible food items. Return a comma-separated list of food items (e.g., cheeseburger, fries).";
+           final response = await _queryOllama(prompt);
+           final foodItems = response.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
 
-      setState(() {
-        _foodItems = recognitions?.map((rec) => rec['label'] as String).toList() ?? [];
-      });
-    }
-  }
+           if (foodItems.isNotEmpty) {
+             setState(() {
+               _foodItems = foodItems;
+             });
+             Navigator.push(
+               context,
+               MaterialPageRoute(
+                 builder: (context) => ResultsScreen(foodItems: _foodItems),
+               ),
+             );
+           } else {
+             setState(() {
+               _errorMessage = 'No food items identified.';
+             });
+           }
+         } catch (e) {
+           setState(() {
+             _errorMessage = 'Error processing description: $e';
+           });
+           debugPrint('Ollama error: $e');
+         } finally {
+           setState(() {
+             _isLoading = false;
+           });
+         }
+       }
 
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          if (_image == null)
-            const Text('No image selected.')
-          else if (kIsWeb)
-            FutureBuilder<Uint8List>(
-              future: _image!.readAsBytes(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
-                  return Image.memory(snapshot.data!, height: 200);
-                } else {
-                  return const CircularProgressIndicator();
-                }
-              },
-            )
-          else
-            Image.file(File(_image!.path), height: 200),
-          const SizedBox(height: 20),
-          _isLoading
-              ? const CircularProgressIndicator()
-              : ElevatedButton(
-                  onPressed: _pickImage,
-                  child: const Text('Take Photo'),
-                ),
-        ],
-      ),
-    );
-  }
+       Future<String> _queryOllama(String prompt) async {
+         try {
+           final response = await http.post(
+             Uri.parse('http://127.0.0.1:11434/api/generate'),
+             headers: {'Content-Type': 'application/json'},
+             body: json.encode({
+               "model": "llama3",
+               "prompt": prompt,
+               "stream": false,
+             }),
+           );
 
-  @override
-  void dispose() {
-    Tflite.close();
-    super.dispose();
-  }
-}
+           if (response.statusCode == 200) {
+             return json.decode(response.body)['response'];
+           } else {
+             throw Exception("Failed to get response from Ollama: ${response.statusCode}");
+           }
+         } catch (e) {
+           debugPrint('Ollama error: $e');
+           return 'No items identified';
+         }
+       }
 
-class ResultsScreen extends StatefulWidget {
-  final List<String> foodItems;
+       @override
+       Widget build(BuildContext context) {
+         return Center(
+           child: Column(
+             mainAxisAlignment: MainAxisAlignment.center,
+             children: [
+               if (_errorMessage != null)
+                 Padding(
+                   padding: const EdgeInsets.all(8.0),
+                   child: Text(
+                     _errorMessage!,
+                     style: const TextStyle(color: Colors.red),
+                   ),
+                 ),
+               if (_image == null)
+                 const Text('No image selected.')
+               else
+                 Image.file(File(_image!.path), height: 200),
+               const SizedBox(height: 20),
+               _isLoading
+                   ? const CircularProgressIndicator()
+                   : ElevatedButton(
+                       onPressed: _pickImage,
+                       child: const Text('Take Photo'),
+                     ),
+             ],
+           ),
+         );
+       }
+     }
 
-  const ResultsScreen({super.key, required this.foodItems});
+          // ... (keep existing imports and Meal class unchanged)
 
-  @override
-  _ResultsScreenState createState() => _ResultsScreenState();
-}
+     class ResultsScreen extends StatefulWidget {
+       final List<String> foodItems;
 
-class _ResultsScreenState extends State<ResultsScreen> {
-  Meal? _meal;
-  bool _isLoading = true;
+       const ResultsScreen({super.key, required this.foodItems});
 
-  @override
-  void initState() {
-    super.initState();
-    _fetchNutritionData();
-  }
+       @override
+       _ResultsScreenState createState() => _ResultsScreenState();
+     }
 
-  Future<void> _fetchNutritionData() async {
-    final prompt = _buildPrompt(widget.foodItems);
-    final response = await _queryOllama(prompt);
+     class _ResultsScreenState extends State<ResultsScreen> {
+       Meal? _meal;
+       bool _isLoading = true;
 
-    final nutritionData = _parseOllamaResponse(response);
+       @override
+       void initState() {
+         super.initState();
+         _fetchNutritionData();
+       }
 
-    final meal = Meal(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      foodItems: widget.foodItems,
-      calories: nutritionData['calories'] ?? 0,
-      protein: nutritionData['protein']?.toDouble() ?? 0.0,
-      carbs: nutritionData['carbs']?.toDouble() ?? 0.0,
-      fat: nutritionData['fat']?.toDouble() ?? 0.0,
-      timestamp: DateTime.now(),
-    );
+       Future<void> _fetchNutritionData() async {
+         final prompt = _buildPrompt(widget.foodItems);
+         final response = await _queryOllama(prompt);
 
-    await _saveMeal(meal);
+         final nutritionData = _parseOllamaResponse(response);
 
-    setState(() {
-      _meal = meal;
-      _isLoading = false;
-    });
-  }
+         // Ensure valid numeric values
+         final calories = nutritionData['calories'] is int ? nutritionData['calories'] : 0;
+         final protein = nutritionData['protein'] is num ? nutritionData['protein'].toDouble() : 0.0;
+         final carbs = nutritionData['carbs'] is num ? nutritionData['carbs'].toDouble() : 0.0;
+         final fat = nutritionData['fat'] is num ? nutritionData['fat'].toDouble() : 0.0;
 
-  String _buildPrompt(List<String> foodItems) {
-    final items = foodItems.join(", ");
-    return "Estimate total calories, protein, carbs, and fat for a meal containing: $items. Format output clearly as JSON: {\"calories\": int, \"protein\": double, \"carbs\": double, \"fat\": double}";
-  }
+         final meal = Meal(
+           id: DateTime.now().millisecondsSinceEpoch.toString(),
+           foodItems: widget.foodItems,
+           calories: calories,
+           protein: protein,
+           carbs: carbs,
+           fat: fat,
+           timestamp: DateTime.now(),
+         );
 
-  Future<String> _queryOllama(String prompt) async {
-    try {
-      final response = await http.post(
-        Uri.parse('http://localhost:11434/api/generate'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          "model": "llama3",
-          "prompt": prompt,
-          "stream": false,
-        }),
-      );
+         await _saveMeal(meal);
 
-      if (response.statusCode == 200) {
-        return json.decode(response.body)['response'];
-      } else {
-        throw Exception("Failed to get response from Ollama");
-      }
-    } catch (e) {
-      return '{"calories": 0, "protein": 0.0, "carbs": 0.0, "fat": 0.0}';
-    }
-  }
+         setState(() {
+           _meal = meal;
+           _isLoading = false;
+         });
+       }
 
-  Map<String, dynamic> _parseOllamaResponse(String response) {
-    try {
-      return json.decode(response);
-    } catch (e) {
-      return {'calories': 0, 'protein': 0.0, 'carbs': 0.0, 'fat': 0.0};
-    }
-  }
+       String _buildPrompt(List<String> foodItems) {
+         final items = foodItems.join(", ");
+         return "Estimate total calories, protein, carbs, and fat for a meal containing: $items. Return ONLY a JSON object with the following structure: {\"calories\": int, \"protein\": double, \"carbs\": double, \"fat\": double}. Do not include any additional text or explanations.";
+       }
 
-  Future<void> _saveMeal(Meal meal) async {
-    final prefs = await SharedPreferences.getInstance();
-    final mealsJson = prefs.getString('meals') ?? '[]';
-    final meals = json.decode(mealsJson) as List;
-    meals.add(meal.toJson());
-    await prefs.setString('meals', json.encode(meals));
-  }
+       Future<String> _queryOllama(String prompt) async {
+         try {
+           final response = await http.post(
+             Uri.parse('http://127.0.0.1:11434/api/generate'),
+             headers: {'Content-Type': 'application/json'},
+             body: json.encode({
+               "model": "llama3",
+               "prompt": prompt,
+               "stream": false,
+             }),
+           );
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Nutrition Results')),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _meal == null
-              ? const Center(child: Text('No data available'))
-              : Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Foods: ${widget.foodItems.join(", ")}'),
-                      Text('Calories: ${_meal!.calories} kcal'),
-                      Text('Protein: ${_meal!.protein}g'),
-                      Text('Carbs: ${_meal!.carbs}g'),
-                      Text('Fat: ${_meal!.fat}g'),
-                      const SizedBox(height: 20),
-                      SizedBox(
-                        height: 200,
-                        child: PieChart(
-                          PieChartData(
-                            sections: [
-                              PieChartSectionData(
-                                value: _meal!.protein,
-                                title: 'Protein',
-                                color: Colors.blue,
-                              ),
-                              PieChartSectionData(
-                                value: _meal!.carbs,
-                                title: 'Carbs',
-                                color: Colors.green,
-                              ),
-                              PieChartSectionData(
-                                value: _meal!.fat,
-                                title: 'Fat',
-                                color: Colors.red,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-    );
-  }
-}
+           if (response.statusCode == 200) {
+             return json.decode(response.body)['response'];
+           } else {
+             throw Exception("Failed to get response from Ollama: ${response.statusCode}");
+           }
+         } catch (e) {
+           debugPrint('Ollama error: $e');
+           return '{"calories": 0, "protein": 0.0, "carbs": 0.0, "fat": 0.0}';
+         }
+       }
 
-class HistoryScreen extends StatefulWidget {
-  const HistoryScreen({super.key});
+       Map<String, dynamic> _parseOllamaResponse(String response) {
+         try {
+           // Attempt to parse as JSON
+           return json.decode(response) as Map<String, dynamic>;
+         } catch (e) {
+           debugPrint('Parse error: $e');
+           // Fallback to default values if parsing fails
+           return {'calories': 0, 'protein': 0.0, 'carbs': 0.0, 'fat': 0.0};
+         }
+       }
 
-  @override
-  _HistoryScreenState createState() => _HistoryScreenState();
-}
+       Future<void> _saveMeal(Meal meal) async {
+         final prefs = await SharedPreferences.getInstance();
+         final mealsJson = prefs.getString('meals') ?? '[]';
+         final meals = json.decode(mealsJson) as List;
+         meals.add(meal.toJson());
+         await prefs.setString('meals', json.encode(meals));
+       }
 
-class _HistoryScreenState extends State<HistoryScreen> {
-  List<Meal> _meals = [];
+       @override
+       Widget build(BuildContext context) {
+         return Scaffold(
+           appBar: AppBar(title: const Text('Nutrition Results')),
+           body: _isLoading
+               ? const Center(child: CircularProgressIndicator())
+               : _meal == null
+                   ? const Center(child: Text('No data available'))
+                   : Padding(
+                       padding: const EdgeInsets.all(16.0),
+                       child: Column(
+                         crossAxisAlignment: CrossAxisAlignment.start,
+                         children: [
+                           Text('Foods: ${widget.foodItems.join(", ")}'),
+                           Text('Calories: ${_meal!.calories} kcal'),
+                           Text('Protein: ${_meal!.protein}g'),
+                           Text('Carbs: ${_meal!.carbs}g'),
+                           Text('Fat: ${_meal!.fat}g'),
+                           const SizedBox(height: 20),
+                           SizedBox(
+                             height: 200,
+                             child: PieChart(
+                               PieChartData(
+                                 sections: [
+                                   PieChartSectionData(
+                                     value: _meal!.protein > 0 ? _meal!.protein : 1.0, // Avoid NaN
+                                     title: 'Protein',
+                                     color: Colors.blue,
+                                   ),
+                                   PieChartSectionData(
+                                     value: _meal!.carbs > 0 ? _meal!.carbs : 1.0, // Avoid NaN
+                                     title: 'Carbs',
+                                     color: Colors.green,
+                                   ),
+                                   PieChartSectionData(
+                                     value: _meal!.fat > 0 ? _meal!.fat : 1.0, // Avoid NaN
+                                     title: 'Fat',
+                                     color: Colors.red,
+                                   ),
+                                 ],
+                               ),
+                             ),
+                           ),
+                         ],
+                       ),
+                     ),
+         );
+       }
+     }
 
-  @override
-  void initState() {
-    super.initState();
-    _loadMeals();
-  }
+     class HistoryScreen extends StatefulWidget {
+       const HistoryScreen({super.key});
 
-  Future<void> _loadMeals() async {
-    final prefs = await SharedPreferences.getInstance();
-    final mealsJson = prefs.getString('meals') ?? '[]';
-    final mealsList = json.decode(mealsJson) as List;
-    setState(() {
-      _meals = mealsList.map((json) => Meal.fromJson(json)).toList();
-    });
-  }
+       @override
+       _HistoryScreenState createState() => _HistoryScreenState();
+     }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Meal History')),
-      body: _meals.isEmpty
-          ? const Center(child: Text('No meals logged yet.'))
-          : ListView.builder(
-              itemCount: _meals.length,
-              itemBuilder: (context, index) {
-                final meal = _meals[index];
-                return ListTile(
-                  title: Text(meal.foodItems.join(", ")),
-                  subtitle: Text(
-                      'Calories: ${meal.calories} kcal | ${meal.timestamp.toString()}'),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ResultsScreen(foodItems: meal.foodItems),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-    );
-  }
-}
+     class _HistoryScreenState extends State<HistoryScreen> {
+       List<Meal> _meals = [];
+
+       @override
+       void initState() {
+         super.initState();
+         _loadMeals();
+       }
+
+       Future<void> _loadMeals() async {
+         final prefs = await SharedPreferences.getInstance();
+         final mealsJson = prefs.getString('meals') ?? '[]';
+         final mealsList = json.decode(mealsJson) as List;
+         setState(() {
+           _meals = mealsList.map((json) => Meal.fromJson(json)).toList();
+         });
+       }
+
+       @override
+       Widget build(BuildContext context) {
+         return Scaffold(
+           appBar: AppBar(title: const Text('Meal History')),
+           body: _meals.isEmpty
+               ? const Center(child: Text('No meals logged yet.'))
+               : ListView.builder(
+                   itemCount: _meals.length,
+                   itemBuilder: (context, index) {
+                     final meal = _meals[index];
+                     return ListTile(
+                       title: Text(meal.foodItems.join(", ")),
+                       subtitle: Text(
+                           'Calories: ${meal.calories} kcal | ${meal.timestamp.toString()}'),
+                       onTap: () {
+                         Navigator.push(
+                           context,
+                           MaterialPageRoute(
+                             builder: (context) => ResultsScreen(foodItems: meal.foodItems),
+                           ),
+                         );
+                       },
+                     );
+                   },
+                 ),
+         );
+       }
+     }

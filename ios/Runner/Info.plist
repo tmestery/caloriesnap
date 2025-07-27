@@ -2,6 +2,17 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Allow the debugger to connect over your local network.</string>
+	<key>NSBonjourServices</key>
+	<array>
+	<string>_dartVmService._tcp</string>
+	<string>_dartobservatory._tcp</string>
+	</array>
+    <key>NSCameraUsageDescription</key>
+    <string>Allow CaloriScan to access your camera to take photos of meals.</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>Allow CaloriScan to access your photo library to select meal images.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
