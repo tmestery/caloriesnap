@@ -1,4 +1,4 @@
-# Calorie Quest
+# CalorieSnap
 
 Calorie Quest is an app that tracks calories by taking a picture of your meal and using AI to estimate the calorie content.
 
